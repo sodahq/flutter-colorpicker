@@ -1275,7 +1275,7 @@ class ColorPickerArea extends StatefulWidget {
   }) : super(key: key);
 
   final HSVColor hsvColor;
-  final ValueChanged<HSVColor> onColorChanged;
+  final Function(HSVColor, bool) onColorChanged;
   final PaletteType paletteType;
 
   @override
@@ -1283,78 +1283,102 @@ class ColorPickerArea extends StatefulWidget {
 }
 
 class _ColorPickerAreaState extends State<ColorPickerArea> {
-  void _handleColorRectChange(double horizontal, double vertical) {
+  void _handleColorRectChange(
+      double horizontal, double vertical, ignoreEmitResult) {
     switch (widget.paletteType) {
       case PaletteType.hsv:
       case PaletteType.hsvWithHue:
         widget.onColorChanged(
-            widget.hsvColor.withSaturation(horizontal).withValue(vertical));
+            widget.hsvColor.withSaturation(horizontal).withValue(vertical),
+            ignoreEmitResult);
         break;
       case PaletteType.hsvWithSaturation:
         widget.onColorChanged(
-            widget.hsvColor.withHue(horizontal * 360).withValue(vertical));
+          widget.hsvColor.withHue(horizontal * 360).withValue(vertical),
+          ignoreEmitResult,
+        );
         break;
       case PaletteType.hsvWithValue:
         widget.onColorChanged(
-            widget.hsvColor.withHue(horizontal * 360).withSaturation(vertical));
+          widget.hsvColor.withHue(horizontal * 360).withSaturation(vertical),
+          ignoreEmitResult,
+        );
         break;
       case PaletteType.hsl:
       case PaletteType.hslWithHue:
-        widget.onColorChanged(hslToHsv(
-          hsvToHsl(widget.hsvColor)
-              .withSaturation(horizontal)
-              .withLightness(vertical),
-        ));
+        widget.onColorChanged(
+          hslToHsv(
+            hsvToHsl(widget.hsvColor)
+                .withSaturation(horizontal)
+                .withLightness(vertical),
+          ),
+          ignoreEmitResult,
+        );
         break;
       case PaletteType.hslWithSaturation:
-        widget.onColorChanged(hslToHsv(
-          hsvToHsl(widget.hsvColor)
-              .withHue(horizontal * 360)
-              .withLightness(vertical),
-        ));
+        widget.onColorChanged(
+          hslToHsv(
+            hsvToHsl(widget.hsvColor)
+                .withHue(horizontal * 360)
+                .withLightness(vertical),
+          ),
+          ignoreEmitResult,
+        );
         break;
       case PaletteType.hslWithLightness:
-        widget.onColorChanged(hslToHsv(
-          hsvToHsl(widget.hsvColor)
-              .withHue(horizontal * 360)
-              .withSaturation(vertical),
-        ));
+        widget.onColorChanged(
+          hslToHsv(
+            hsvToHsl(widget.hsvColor)
+                .withHue(horizontal * 360)
+                .withSaturation(vertical),
+          ),
+          ignoreEmitResult,
+        );
         break;
       case PaletteType.rgbWithRed:
-        widget.onColorChanged(HSVColor.fromColor(
-          widget.hsvColor
-              .toColor()
-              .withBlue((horizontal * 255).round())
-              .withGreen((vertical * 255).round()),
-        ));
+        widget.onColorChanged(
+            HSVColor.fromColor(
+              widget.hsvColor
+                  .toColor()
+                  .withBlue((horizontal * 255).round())
+                  .withGreen((vertical * 255).round()),
+            ),
+            ignoreEmitResult);
         break;
       case PaletteType.rgbWithGreen:
-        widget.onColorChanged(HSVColor.fromColor(
-          widget.hsvColor
-              .toColor()
-              .withBlue((horizontal * 255).round())
-              .withRed((vertical * 255).round()),
-        ));
+        widget.onColorChanged(
+            HSVColor.fromColor(
+              widget.hsvColor
+                  .toColor()
+                  .withBlue((horizontal * 255).round())
+                  .withRed((vertical * 255).round()),
+            ),
+            ignoreEmitResult);
         break;
       case PaletteType.rgbWithBlue:
-        widget.onColorChanged(HSVColor.fromColor(
-          widget.hsvColor
-              .toColor()
-              .withRed((horizontal * 255).round())
-              .withGreen((vertical * 255).round()),
-        ));
+        widget.onColorChanged(
+          HSVColor.fromColor(
+            widget.hsvColor
+                .toColor()
+                .withRed((horizontal * 255).round())
+                .withGreen((vertical * 255).round()),
+          ),
+          ignoreEmitResult,
+        );
         break;
       default:
         break;
     }
   }
 
-  void _handleColorWheelChange(double hue, Offset normalizedOffset) {
+  void _handleColorWheelChange(
+      double hue, Offset normalizedOffset, bool ignoreEmitResult) {
     double saturation = normalizedOffset.dx.clamp(0.0, 1.0);
     double value = (1.0 - normalizedOffset.dy).clamp(0.0, 1.0);
 
     widget.onColorChanged(
       widget.hsvColor.withHue(hue).withSaturation(saturation).withValue(value),
+      ignoreEmitResult,
     );
   }
 
@@ -1363,6 +1387,7 @@ class _ColorPickerAreaState extends State<ColorPickerArea> {
     BuildContext context,
     double height,
     double width,
+    bool ignoreEmitResult,
   ) {
     RenderBox? getBox = context.findRenderObject() as RenderBox?;
     if (getBox == null) return;
@@ -1379,9 +1404,9 @@ class _ColorPickerAreaState extends State<ColorPickerArea> {
 
       Offset normalizedOffset = Offset(normalizedX, normalizedY);
 
-      _handleColorWheelChange(hue, normalizedOffset);
+      _handleColorWheelChange(hue, normalizedOffset, ignoreEmitResult);
     } else {
-      _handleColorRectChange(normalizedX, 1.0 - normalizedY);
+      _handleColorRectChange(normalizedX, 1.0 - normalizedY, ignoreEmitResult);
     }
   }
 
@@ -1400,10 +1425,12 @@ class _ColorPickerAreaState extends State<ColorPickerArea> {
               () => _AlwaysWinPanGestureRecognizer(),
               (_AlwaysWinPanGestureRecognizer instance) {
                 instance
+                  ..onEnd = ((details) => _handleGesture(
+                      details.globalPosition, context, height, width, false))
                   ..onDown = ((details) => _handleGesture(
-                      details.globalPosition, context, height, width))
+                      details.globalPosition, context, height, width, true))
                   ..onUpdate = ((details) => _handleGesture(
-                      details.globalPosition, context, height, width));
+                      details.globalPosition, context, height, width, true));
               },
             ),
           },

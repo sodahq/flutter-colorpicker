@@ -244,12 +244,11 @@ class _ColorPickerState extends State<ColorPicker> {
     );
   }
 
-  void onColorChanging(HSVColor color) {
-    // Update text in `hexInputController` if provided.
-    widget.hexInputController?.text =
-        colorToHex(color.toColor(), enableAlpha: widget.enableAlpha);
+  void onColorChanging(HSVColor color, bool ignoreEmitResult) {
     setState(() => currentHsvColor = color);
-    widget.onColorChanged(currentHsvColor.toColor());
+
+    if (!ignoreEmitResult) widget.onColorChanged(currentHsvColor.toColor());
+
     if (widget.onHsvColorChanged != null) {
       widget.onHsvColorChanged!(currentHsvColor);
     }
@@ -329,7 +328,10 @@ class _ColorPickerState extends State<ColorPicker> {
                     padding: const EdgeInsets.fromLTRB(15, 0, 0, 10),
                     child: Center(
                       child: GestureDetector(
-                        onTap: () => onColorChanging(HSVColor.fromColor(color)),
+                        onTap: () => onColorChanging(
+                          HSVColor.fromColor(color),
+                          false,
+                        ),
                         child: ColorIndicator(HSVColor.fromColor(color),
                             width: 30, height: 30),
                       ),
@@ -413,8 +415,10 @@ class _ColorPickerState extends State<ColorPicker> {
                             padding: const EdgeInsets.fromLTRB(15, 18, 0, 0),
                             child: Center(
                               child: GestureDetector(
-                                onTap: () =>
-                                    onColorChanging(HSVColor.fromColor(color)),
+                                onTap: () => onColorChanging(
+                                  HSVColor.fromColor(color),
+                                  false,
+                                ),
                                 onLongPress: () {
                                   if (colorHistory.remove(color)) {
                                     widget.onHistoryChanged!(colorHistory);
@@ -723,6 +727,15 @@ class _HueRingPickerState extends State<HueRingPicker> {
 
   void onColorChanging(HSVColor color) {
     setState(() => currentHsvColor = color);
+
+    widget.onColorChanged(currentHsvColor.toColor());
+  }
+
+  void onColorChangingV2(HSVColor color, bool ignoreEmitResult) {
+    setState(() => currentHsvColor = color);
+
+    if (ignoreEmitResult) return;
+
     widget.onColorChanged(currentHsvColor.toColor());
   }
 
@@ -753,7 +766,10 @@ class _HueRingPickerState extends State<HueRingPicker> {
                       width: widget.colorPickerHeight / 1.6,
                       height: widget.colorPickerHeight / 1.6,
                       child: ColorPickerArea(
-                          currentHsvColor, onColorChanging, PaletteType.hsv),
+                        currentHsvColor,
+                        onColorChangingV2,
+                        PaletteType.hsv,
+                      ),
                     )
                   ]),
             ),
@@ -806,7 +822,10 @@ class _HueRingPickerState extends State<HueRingPicker> {
               child: ClipRRect(
                 borderRadius: widget.pickerAreaBorderRadius,
                 child: ColorPickerArea(
-                    currentHsvColor, onColorChanging, PaletteType.hsv),
+                  currentHsvColor,
+                  onColorChangingV2,
+                  PaletteType.hsv,
+                ),
               ),
             ),
           ),
