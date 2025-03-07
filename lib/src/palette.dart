@@ -647,15 +647,15 @@ class _SliderLayout extends MultiChildLayoutDelegate {
       track,
       BoxConstraints.tightFor(
         width: size.width - 30.0,
-        height: size.height / 5,
+        height: size.height * 0.5,
       ),
     );
-    positionChild(track, Offset(15.0, size.height * 0.4));
+    positionChild(track, Offset(15.0, size.height * 0.25));
     layoutChild(
       thumb,
-      BoxConstraints.tightFor(width: 5.0, height: size.height / 4),
+      BoxConstraints.tightFor(width: 5.0, height: size.height * 0.8),
     );
-    positionChild(thumb, Offset(0.0, size.height * 0.4));
+    positionChild(thumb, Offset(0.0, size.height * 0.1));
     layoutChild(
       gestureContainer,
       BoxConstraints.tightFor(width: size.width, height: size.height),
@@ -1196,10 +1196,11 @@ class ColorPickerSlider extends StatelessWidget {
                 border: Border.all(color: Colors.grey, width: 1),
               ),
               child: CustomPaint(
+                  size: Size(box.maxWidth, box.maxHeight),
                   painter: TrackPainter(
-                trackType,
-                hsvColor,
-              )),
+                    trackType,
+                    hsvColor,
+                  )),
             ),
           ),
           LayoutId(

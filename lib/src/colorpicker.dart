@@ -4,6 +4,8 @@
 
 library hsv_picker;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'palette.dart';
 import 'utils.dart';
@@ -170,6 +172,7 @@ class ColorPicker extends StatefulWidget {
 class _ColorPickerState extends State<ColorPicker> {
   HSVColor currentHsvColor = const HSVColor.fromAHSV(0.0, 0.0, 0.0, 0.0);
   List<Color> colorHistory = [];
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -223,6 +226,7 @@ class _ColorPickerState extends State<ColorPicker> {
   @override
   void dispose() {
     widget.hexInputController?.removeListener(colorPickerTextInputListener);
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -231,14 +235,20 @@ class _ColorPickerState extends State<ColorPicker> {
       trackType,
       currentHsvColor,
       (HSVColor color) {
-        // Update text in `hexInputController` if provided.
-        widget.hexInputController?.text =
-            colorToHex(color.toColor(), enableAlpha: widget.enableAlpha);
+        // // Update text in `hexInputController` if provided.
+        // widget.hexInputController?.text =
+        //     colorToHex(color.toColor(), enableAlpha: widget.enableAlpha);
         setState(() => currentHsvColor = color);
-        widget.onColorChanged(currentHsvColor.toColor());
-        if (widget.onHsvColorChanged != null) {
-          widget.onHsvColorChanged!(currentHsvColor);
-        }
+
+        _debounce?.cancel();
+
+        _debounce = Timer(const Duration(milliseconds: 200), () {
+          widget.onColorChanged(currentHsvColor.toColor());
+
+          if (widget.onHsvColorChanged != null) {
+            widget.onHsvColorChanged!(currentHsvColor);
+          }
+        });
       },
       displayThumbColor: widget.displayThumbColor,
     );
@@ -309,13 +319,22 @@ class _ColorPickerState extends State<ColorPicker> {
             child: colorPicker(),
           ),
           SizedBox(
-            height: 40.0,
+            height: 20.0,
             width: widget.colorPickerWidth,
             child: Transform.flip(
               flipX: true,
               child: sliderByPaletteType(),
             ),
           ),
+          if (widget.enableAlpha)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: SizedBox(
+                height: 20.0,
+                width: widget.colorPickerWidth,
+                child: colorPickerSlider(TrackType.alpha),
+              ),
+            ),
           if (colorHistory.isNotEmpty)
             SizedBox(
               width: widget.colorPickerWidth,
