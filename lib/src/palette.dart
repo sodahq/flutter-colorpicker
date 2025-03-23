@@ -497,81 +497,6 @@ class RGBWithBlueColorPainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
-/// Painter for hue color wheel.
-class HUEColorWheelPainter extends CustomPainter {
-  const HUEColorWheelPainter(this.hsvColor, {this.pointerColor});
-
-  final HSVColor hsvColor;
-  final Color? pointerColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Kích thước và tọa độ trung tâm
-    Rect rect = Offset.zero & size;
-
-    // Gradient màu dạng Sweep (cho màu sắc theo HUE)
-    final Gradient gradientS = SweepGradient(colors: [
-      const HSVColor.fromAHSV(1.0, 360.0, 1.0, 1.0).toColor(),
-      const HSVColor.fromAHSV(1.0, 300.0, 1.0, 1.0).toColor(),
-      const HSVColor.fromAHSV(1.0, 240.0, 1.0, 1.0).toColor(),
-      const HSVColor.fromAHSV(1.0, 180.0, 1.0, 1.0).toColor(),
-      const HSVColor.fromAHSV(1.0, 120.0, 1.0, 1.0).toColor(),
-      const HSVColor.fromAHSV(1.0, 60.0, 1.0, 1.0).toColor(),
-      const HSVColor.fromAHSV(1.0, 0.0, 1.0, 1.0).toColor(),
-    ]);
-
-    // Gradient màu dạng Radial (cho độ bão hòa giảm từ tâm)
-    const Gradient gradientR = RadialGradient(
-      colors: [
-        Colors.white,
-        Color(0x00FFFFFF),
-      ],
-    );
-
-    // Vẽ gradient Sweep
-    canvas.drawRect(
-      rect,
-      Paint()..shader = gradientS.createShader(rect),
-    );
-
-    // Vẽ gradient Radial
-    canvas.drawRect(
-      rect,
-      Paint()..shader = gradientR.createShader(rect),
-    );
-
-    // Vẽ lớp giảm giá trị (Value)
-    canvas.drawRect(
-      rect,
-      Paint()..color = Colors.black.withOpacity(1 - hsvColor.value),
-    );
-
-    // Tọa độ con trỏ (theo hình chữ nhật)
-    double pointerX = hsvColor.saturation * size.width;
-    double pointerY = (1 - hsvColor.value) * size.height;
-
-    // Đảm bảo con trỏ nằm trong hình chữ nhật
-    pointerX = pointerX.clamp(0.0, size.width);
-    pointerY = pointerY.clamp(0.0, size.height);
-
-    // Vẽ con trỏ
-    canvas.drawCircle(
-      Offset(pointerX, pointerY),
-      size.height * 0.06,
-      Paint()
-        ..color = pointerColor ??
-            (useWhiteForeground(hsvColor.toColor())
-                ? Colors.white
-                : Colors.black)
-        ..strokeWidth = 1.5
-        ..style = PaintingStyle.stroke,
-    );
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
-}
-
 /// Painter for hue ring.
 class HueRingPainter extends CustomPainter {
   const HueRingPainter(this.hsvColor,
@@ -1372,13 +1297,29 @@ class _ColorPickerAreaState extends State<ColorPickerArea> {
     }
   }
 
-  void _handleColorWheelChange(
-      double hue, Offset normalizedOffset, bool ignoreEmitResult) {
-    double saturation = normalizedOffset.dx.clamp(0.0, 1.0);
-    double value = (1.0 - normalizedOffset.dy).clamp(0.0, 1.0);
+  void _handleGestureHueWheel(
+    BuildContext context,
+    Offset position,
+    double width,
+    double height,
+    bool ignoreEmitResult,
+  ) {
+    RenderBox renderBox = context.findRenderObject() as RenderBox;
+    Offset localPosition = renderBox.globalToLocal(position);
+
+    final Offset center = Offset(width / 2, height / 2);
+    Offset relative = localPosition - center;
+
+    double angle = atan2(relative.dy, relative.dx);
+    double hue = (angle * 180 / pi) + 90;
+    if (hue < 0) hue += 360;
+
+    double distance = relative.distance;
+    double radius = width / 2;
+    double saturation = (distance / radius).clamp(0.0, 1.0);
 
     widget.onColorChanged(
-      widget.hsvColor.withHue(hue).withSaturation(saturation).withValue(value),
+      HSVColor.fromAHSV(1.0, hue, saturation, widget.hsvColor.value),
       ignoreEmitResult,
     );
   }
@@ -1390,23 +1331,24 @@ class _ColorPickerAreaState extends State<ColorPickerArea> {
     double width,
     bool ignoreEmitResult,
   ) {
-    RenderBox? getBox = context.findRenderObject() as RenderBox?;
-    if (getBox == null) return;
-
-    Offset localOffset = getBox.globalToLocal(position);
-    double horizontal = localOffset.dx.clamp(0.0, width);
-    double vertical = localOffset.dy.clamp(0.0, height);
-
-    double normalizedX = (horizontal / width).clamp(0.0, 1.0);
-    double normalizedY = (vertical / height).clamp(0.0, 1.0);
-
     if (widget.paletteType == PaletteType.hueWheel) {
-      double hue = (normalizedX * 360.0).clamp(0.0, 360.0);
-
-      Offset normalizedOffset = Offset(normalizedX, normalizedY);
-
-      _handleColorWheelChange(hue, normalizedOffset, ignoreEmitResult);
+      _handleGestureHueWheel(
+        context,
+        position,
+        width,
+        height,
+        ignoreEmitResult,
+      );
     } else {
+      RenderBox? getBox = context.findRenderObject() as RenderBox?;
+      if (getBox == null) return;
+
+      Offset localOffset = getBox.globalToLocal(position);
+      double horizontal = localOffset.dx.clamp(0.0, width);
+      double vertical = localOffset.dy.clamp(0.0, height);
+
+      double normalizedX = (horizontal / width).clamp(0.0, 1.0);
+      double normalizedY = (vertical / height).clamp(0.0, 1.0);
       _handleColorRectChange(normalizedX, 1.0 - normalizedY, ignoreEmitResult);
     }
   }
@@ -1485,6 +1427,81 @@ class _ColorPickerAreaState extends State<ColorPickerArea> {
       },
     );
   }
+}
+
+/// Painter for hue color wheel.
+class HUEColorWheelPainter extends CustomPainter {
+  const HUEColorWheelPainter(this.hsvColor, {this.pointerColor});
+
+  final HSVColor hsvColor;
+  final Color? pointerColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Rect rect = Offset.zero & size;
+
+    final Gradient gradientS = SweepGradient(
+      colors: [
+        const HSVColor.fromAHSV(1.0, 0.0, 1.0, 1.0).toColor(),
+        const HSVColor.fromAHSV(1.0, 60.0, 1.0, 1.0).toColor(),
+        const HSVColor.fromAHSV(1.0, 120.0, 1.0, 1.0).toColor(),
+        const HSVColor.fromAHSV(1.0, 180.0, 1.0, 1.0).toColor(),
+        const HSVColor.fromAHSV(1.0, 240.0, 1.0, 1.0).toColor(),
+        const HSVColor.fromAHSV(1.0, 300.0, 1.0, 1.0).toColor(),
+        const HSVColor.fromAHSV(1.0, 360.0, 1.0, 1.0).toColor(),
+      ],
+      transform: const GradientRotation(-pi / 2),
+    );
+
+    const Gradient gradientR = RadialGradient(
+      colors: [
+        Colors.white,
+        Color(0x00FFFFFF),
+      ],
+    );
+
+    canvas.drawRect(
+      rect,
+      Paint()..shader = gradientS.createShader(rect),
+    );
+
+    canvas.drawRect(
+      rect,
+      Paint()..shader = gradientR.createShader(rect),
+    );
+
+    canvas.drawRect(
+      rect,
+      Paint()..color = Colors.black.withOpacity(1 - hsvColor.value),
+    );
+
+    // Draw pointer
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    final double radius = size.width / 2; // Bánh xe là hình tròn
+
+    double angle = (hsvColor.hue - 90) * pi / 180;
+
+    double x = center.dx + radius * hsvColor.saturation * cos(angle);
+    double y = center.dy + radius * hsvColor.saturation * sin(angle);
+
+    x = x.clamp(0, size.width);
+    y = y.clamp(0, size.height);
+
+    canvas.drawCircle(
+      Offset(x, y),
+      size.height * 0.04,
+      Paint()
+        ..color = pointerColor ??
+            (useWhiteForeground(hsvColor.toColor())
+                ? Colors.white
+                : Colors.black)
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
 
 /// Provide Hue Ring with HSV Rectangle of palette widget.
