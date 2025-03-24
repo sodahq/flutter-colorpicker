@@ -1311,7 +1311,7 @@ class _ColorPickerAreaState extends State<ColorPickerArea> {
     Offset relative = localPosition - center;
 
     double angle = atan2(relative.dy, relative.dx);
-    double hue = (angle * 180 / pi) + 90;
+    double hue = (angle * 180 / pi) - 90;
     if (hue < 0) hue += 360;
 
     double distance = relative.distance;
@@ -1450,7 +1450,7 @@ class HUEColorWheelPainter extends CustomPainter {
         const HSVColor.fromAHSV(1.0, 300.0, 1.0, 1.0).toColor(),
         const HSVColor.fromAHSV(1.0, 360.0, 1.0, 1.0).toColor(),
       ],
-      transform: const GradientRotation(-pi / 2),
+      transform: const GradientRotation(pi / 2),
     );
 
     const Gradient gradientR = RadialGradient(
@@ -1477,9 +1477,9 @@ class HUEColorWheelPainter extends CustomPainter {
 
     // Draw pointer
     final Offset center = Offset(size.width / 2, size.height / 2);
-    final double radius = size.width / 2; // Bánh xe là hình tròn
+    final double radius = size.width / 2;
 
-    double angle = (hsvColor.hue - 90) * pi / 180;
+    double angle = (hsvColor.hue + 90) * pi / 180;
 
     double x = center.dx + radius * hsvColor.saturation * cos(angle);
     double y = center.dy + radius * hsvColor.saturation * sin(angle);
