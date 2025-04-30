@@ -1456,8 +1456,10 @@ class HUEColorWheelPainter extends CustomPainter {
     const Gradient gradientR = RadialGradient(
       colors: [
         Colors.white,
+        // Colors.white,
         Color(0x00FFFFFF),
       ],
+      stops: [0.2, 1.0],
     );
 
     canvas.drawRect(
